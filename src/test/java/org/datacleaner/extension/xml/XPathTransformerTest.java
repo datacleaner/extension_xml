@@ -2,9 +2,11 @@ package org.datacleaner.extension.xml;
 
 import static org.junit.Assert.assertEquals;
 
+import org.datacleaner.api.ComponentContext;
 import org.datacleaner.api.OutputColumns;
 import org.datacleaner.data.MockInputColumn;
 import org.datacleaner.data.MockInputRow;
+import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,6 +26,8 @@ public class XPathTransformerTest {
         MockInputColumn<String> xmlInputColumn = new MockInputColumn<String>("xml value");
 
         xPathTransformer.column = xmlInputColumn;
+        
+        xPathTransformer.componentContext = EasyMock.createMock(ComponentContext.class);
     }
 
     @Test
@@ -33,6 +37,7 @@ public class XPathTransformerTest {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
         xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.init();
 
         assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
 
@@ -49,6 +54,7 @@ public class XPathTransformerTest {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
         xPathTransformer.xPathExpressions = new String[] { "/books/book[1]", "/books/book[2]" };
+        xPathTransformer.init();
 
         assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
         assertEquals("Gulliver's Travels", xPathTransformer.transform(inputRow)[1].toString());
@@ -66,6 +72,7 @@ public class XPathTransformerTest {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
         xPathTransformer.xPathExpressions = new String[] { "<abracadabra>" };
+        xPathTransformer.init();
 
         assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
     }
@@ -76,6 +83,7 @@ public class XPathTransformerTest {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { "" });
 
         xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.init();
 
         assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
     }
@@ -86,6 +94,7 @@ public class XPathTransformerTest {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { null });
 
         xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.init();
 
         assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
     }

@@ -7,33 +7,56 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.datacleaner.api.Categorized;
+import org.datacleaner.api.ComponentContext;
 import org.datacleaner.api.Configured;
 import org.datacleaner.api.Description;
+import org.datacleaner.api.ExecutionLogMessage;
+import org.datacleaner.api.Initialize;
 import org.datacleaner.api.InputColumn;
 import org.datacleaner.api.InputRow;
 import org.datacleaner.api.OutputColumns;
+import org.datacleaner.api.Provided;
 import org.datacleaner.api.Transformer;
 import org.datacleaner.components.categories.DataStructuresCategory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.datacleaner.components.categories.TransformSuperCategory;
 import org.w3c.dom.Document;
 
 @Named("Select values from XML")
 @Description("Select values from XML using a number of XPath expressions")
-@Categorized(DataStructuresCategory.class)
+@Categorized(superCategory = TransformSuperCategory.class, value = DataStructuresCategory.class)
 public class XPathTransformer implements Transformer {
-    private static final Logger logger = LoggerFactory.getLogger(XPathTransformer.class);
-
     @Configured
     InputColumn<String> column;
 
     @Configured
     @Description("XPath expressions used to retrieve values from inputs.")
     String[] xPathExpressions;
+
+    @Provided
+    ComponentContext componentContext;
+
+    private XPathExpression[] compiledExpressions;
+
+    @Initialize
+    public void init() {
+        final XPath xPath = XPathFactory.newInstance().newXPath();
+
+        compiledExpressions = new XPathExpression[xPathExpressions.length];
+
+        for (int i = 0; i < xPathExpressions.length; i++) {
+            try {
+                compiledExpressions[i] = xPath.compile(xPathExpressions[i]);
+            } catch (XPathExpressionException e) {
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
+                        + xPathExpressions[i] + "\"."));
+            }
+        }
+    }
 
     @Override
     public OutputColumns getOutputColumns() {
@@ -46,18 +69,18 @@ public class XPathTransformer implements Transformer {
 
     @Override
     public String[] transform(InputRow inputRow) {
-        final String[] result = new String[xPathExpressions.length];
+        final String[] result = new String[compiledExpressions.length];
 
         Document xmlDocument = parseDocument(inputRow.getValue(column));
 
-        for (int i = 0; i < xPathExpressions.length; i++) {
-            result[i] = evaluateXPathExpression(xPathExpressions[i], xmlDocument);
+        for (int i = 0; i < compiledExpressions.length; i++) {
+            result[i] = evaluateXPathExpression(compiledExpressions[i], xmlDocument);
         }
 
         return result;
     }
 
-    private static Document parseDocument(String xml) {
+    private Document parseDocument(String xml) {
         final DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         try {
             final DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -67,23 +90,23 @@ public class XPathTransformer implements Transformer {
 
                 return documentBuilder.parse(xmlStream);
             } catch (Exception e) {
-                logger.info("Error occured parsing string as xml document: {}", xml);
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred parsing string as xml document:\n" + xml));
             }
             return documentBuilder.newDocument();
         } catch (ParserConfigurationException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Failed to create a DocumentBuilder.", e);
         }
     }
-    
-    private static String evaluateXPathExpression(String xPathExpression, Document xmlDocument) {
-        final XPath xPath = XPathFactory.newInstance().newXPath();
-                
-        try {
-            return xPath.evaluate(xPathExpression, xmlDocument);
-        } catch (XPathExpressionException e) {
-            logger.info("Error occured evaluating XPath expression: {}", xPathExpression);
+
+    private String evaluateXPathExpression(XPathExpression xPathExpression, Document xmlDocument) {
+        if (xPathExpression != null) {
+            try {
+                return xPathExpression.evaluate(xmlDocument);
+            } catch (XPathExpressionException e) {
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \"" + xPathExpression + "\"."));
+            }
         }
-        
+
         return "";
     }
 }

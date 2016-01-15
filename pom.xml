@@ -22,5 +22,11 @@
 			<artifactId>DataCleaner-engine-core</artifactId>
 			<version>4.5.3</version>
 		</dependency>
+		<dependency>
+			<groupId>org.eobjects.datacleaner</groupId>
+			<artifactId>DataCleaner-testware</artifactId>
+			<version>4.5.3</version>
+			<scope>test</scope>
+		</dependency>		
 	</dependencies>
 </project>
