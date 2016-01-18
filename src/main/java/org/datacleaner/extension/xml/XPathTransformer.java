@@ -2,11 +2,19 @@ package org.datacleaner.extension.xml;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.StringWriter;
+
 import javax.inject.Named;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -25,6 +33,7 @@ import org.datacleaner.api.Transformer;
 import org.datacleaner.components.categories.DataStructuresCategory;
 import org.datacleaner.components.categories.TransformSuperCategory;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 @Named("Select values from XML")
 @Description("Select values from XML using a number of XPath expressions")
@@ -42,6 +51,8 @@ public class XPathTransformer implements Transformer {
 
     private XPathExpression[] compiledExpressions;
 
+    private TransformerFactory transformerFactory;
+
     @Initialize
     public void init() {
         final XPath xPath = XPathFactory.newInstance().newXPath();
@@ -56,6 +67,8 @@ public class XPathTransformer implements Transformer {
                         + xPathExpressions[i] + "\"."));
             }
         }
+
+        transformerFactory = TransformerFactory.newInstance();
     }
 
     @Override
@@ -90,7 +103,8 @@ public class XPathTransformer implements Transformer {
 
                 return documentBuilder.parse(xmlStream);
             } catch (Exception e) {
-                componentContext.publishMessage(new ExecutionLogMessage("Error occurred parsing string as xml document:\n" + xml));
+                componentContext.publishMessage(new ExecutionLogMessage(
+                        "Error occurred parsing string as xml document:\n" + xml));
             }
             return documentBuilder.newDocument();
         } catch (ParserConfigurationException e) {
@@ -101,12 +115,30 @@ public class XPathTransformer implements Transformer {
     private String evaluateXPathExpression(XPathExpression xPathExpression, Document xmlDocument) {
         if (xPathExpression != null) {
             try {
-                return xPathExpression.evaluate(xmlDocument);
+                NodeList results = (NodeList) xPathExpression.evaluate(xmlDocument, XPathConstants.NODESET);
+
+                return writeDocumentToString(results);
             } catch (XPathExpressionException e) {
-                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \"" + xPathExpression + "\"."));
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
+                        + xPathExpression + "\"."));
+            } catch (TransformerException e) {
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred applying XPath expression: \""
+                        + xPathExpression + "\" to xml."));
             }
         }
 
         return "";
+    }
+
+    public String writeDocumentToString(NodeList nodeList) throws TransformerException {
+        final javax.xml.transform.Transformer transformer = transformerFactory.newTransformer();
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+
+        final StringWriter writer = new StringWriter();
+
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            transformer.transform(new DOMSource(nodeList.item(i)), new StreamResult(writer));
+        }
+        return writer.toString();
     }
 }

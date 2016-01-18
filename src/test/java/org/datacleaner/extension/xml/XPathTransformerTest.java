@@ -17,13 +17,19 @@ public class XPathTransformerTest {
                 + "<book>Gulliver's Travels</book>"
             + "</books>";
     
+    private static final String INPUT_COLUMN_NAME = "xml value";
+
+    private static final String XPATH_QUERY_FIRST_BOOK = "/books/book[1]/text()";
+    
+    private static final String XPATH_QUERY_SECOND_BOOK = "/books/book[2]/text()";
+
     private XPathTransformer xPathTransformer;
 
     @Before
     public void setUp() {
         xPathTransformer = new XPathTransformer();
 
-        MockInputColumn<String> xmlInputColumn = new MockInputColumn<String>("xml value");
+        MockInputColumn<String> xmlInputColumn = new MockInputColumn<String>(INPUT_COLUMN_NAME);
 
         xPathTransformer.column = xmlInputColumn;
         
@@ -32,11 +38,10 @@ public class XPathTransformerTest {
 
     @Test
     public void testSingleXPathQuery() {
-
         MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
-        xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
         assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
@@ -44,7 +49,7 @@ public class XPathTransformerTest {
         OutputColumns outputColumns = xPathTransformer.getOutputColumns();
 
         assertEquals(1, outputColumns.getColumnCount());
-        assertEquals("xml value (/books/book[1])", outputColumns.getColumnName(0));
+        assertEquals(INPUT_COLUMN_NAME + " (" + XPATH_QUERY_FIRST_BOOK + ")", outputColumns.getColumnName(0));
         assertEquals(String.class, outputColumns.getColumnType(0));
     }
 
@@ -53,7 +58,7 @@ public class XPathTransformerTest {
         MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
-        xPathTransformer.xPathExpressions = new String[] { "/books/book[1]", "/books/book[2]" };
+        xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK, XPATH_QUERY_SECOND_BOOK };
         xPathTransformer.init();
 
         assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
@@ -62,8 +67,10 @@ public class XPathTransformerTest {
         OutputColumns outputColumns = xPathTransformer.getOutputColumns();
 
         assertEquals(2, outputColumns.getColumnCount());
-        assertEquals("xml value (/books/book[1])", outputColumns.getColumnName(0));
-        assertEquals("xml value (/books/book[2])", outputColumns.getColumnName(1));
+        assertEquals(INPUT_COLUMN_NAME
+                + " (" + XPATH_QUERY_FIRST_BOOK + ")", outputColumns.getColumnName(0));
+        assertEquals(INPUT_COLUMN_NAME
+                + " (" + XPATH_QUERY_SECOND_BOOK + ")", outputColumns.getColumnName(1));
     }
 
     @Test
@@ -82,7 +89,7 @@ public class XPathTransformerTest {
         MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { "" });
 
-        xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
         assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
@@ -93,9 +100,29 @@ public class XPathTransformerTest {
         MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { null });
 
-        xPathTransformer.xPathExpressions = new String[] { "/books/book[1]" };
+        xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
         assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
+    }
+
+    @Test
+    public void testSingleXPathQueryWithMultipleResults() {
+        MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
+                (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
+
+        final String xPathQueryAllBooks = "/books/book";
+        
+        xPathTransformer.xPathExpressions = new String[] { xPathQueryAllBooks };
+        xPathTransformer.init();
+
+        assertEquals("<book>Robinson Crusoe</book><book>Gulliver's Travels</book>", 
+                xPathTransformer.transform(inputRow)[0]);
+
+        OutputColumns outputColumns = xPathTransformer.getOutputColumns();
+
+        assertEquals(1, outputColumns.getColumnCount());
+        assertEquals(INPUT_COLUMN_NAME + " (" + xPathQueryAllBooks + ")", outputColumns.getColumnName(0));
+        assertEquals(String.class, outputColumns.getColumnType(0));
     }
 }
