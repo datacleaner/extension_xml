@@ -3,6 +3,8 @@ package org.datacleaner.extension.xml;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.inject.Named;
 import javax.xml.parsers.DocumentBuilder;
@@ -33,6 +35,7 @@ import org.datacleaner.api.Transformer;
 import org.datacleaner.components.categories.DataStructuresCategory;
 import org.datacleaner.components.categories.TransformSuperCategory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 @Named("Select values from XML")
@@ -81,8 +84,8 @@ public class XPathTransformer implements Transformer {
     }
 
     @Override
-    public String[] transform(InputRow inputRow) {
-        final String[] result = new String[compiledExpressions.length];
+    public List<String>[] transform(InputRow inputRow) {
+        final List<String>[] result = new List[compiledExpressions.length];
 
         Document xmlDocument = parseDocument(inputRow.getValue(column));
 
@@ -112,33 +115,36 @@ public class XPathTransformer implements Transformer {
         }
     }
 
-    private String evaluateXPathExpression(XPathExpression xPathExpression, Document xmlDocument) {
+    private List<String> evaluateXPathExpression(XPathExpression xPathExpression, Document xmlDocument) {
+        List<String> transformedNodes = new ArrayList<String>();
+        
         if (xPathExpression != null) {
             try {
                 NodeList results = (NodeList) xPathExpression.evaluate(xmlDocument, XPathConstants.NODESET);
 
-                return writeDocumentToString(results);
+                for (int i = 0; i < results.getLength(); i++) {
+                    transformedNodes.add(writeDocumentToString(results.item(i)));
+                }
             } catch (XPathExpressionException e) {
-                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
-                        + xPathExpression + "\"."));
+            componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
+                    + xPathExpression + "\"."));
             } catch (TransformerException e) {
                 componentContext.publishMessage(new ExecutionLogMessage("Error occurred applying XPath expression: \""
                         + xPathExpression + "\" to xml."));
             }
         }
 
-        return "";
+        return transformedNodes;
     }
 
-    public String writeDocumentToString(NodeList nodeList) throws TransformerException {
+    public String writeDocumentToString(Node node) throws TransformerException {
         final javax.xml.transform.Transformer transformer = transformerFactory.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 
         final StringWriter writer = new StringWriter();
 
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            transformer.transform(new DOMSource(nodeList.item(i)), new StreamResult(writer));
-        }
+        transformer.transform(new DOMSource(node), new StreamResult(writer));
+
         return writer.toString();
     }
 }

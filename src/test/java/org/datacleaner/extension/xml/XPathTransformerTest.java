@@ -1,7 +1,10 @@
 package org.datacleaner.extension.xml;
 
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
+import java.util.Arrays;
 import org.datacleaner.api.ComponentContext;
 import org.datacleaner.api.OutputColumns;
 import org.datacleaner.data.MockInputColumn;
@@ -44,8 +47,7 @@ public class XPathTransformerTest {
         xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
-        assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
-
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {"Robinson Crusoe"})));
         OutputColumns outputColumns = xPathTransformer.getOutputColumns();
 
         assertEquals(1, outputColumns.getColumnCount());
@@ -61,8 +63,8 @@ public class XPathTransformerTest {
         xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK, XPATH_QUERY_SECOND_BOOK };
         xPathTransformer.init();
 
-        assertEquals("Robinson Crusoe", xPathTransformer.transform(inputRow)[0].toString());
-        assertEquals("Gulliver's Travels", xPathTransformer.transform(inputRow)[1].toString());
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {"Robinson Crusoe"})));
+        assertThat(xPathTransformer.transform(inputRow)[1], is(Arrays.asList(new String[] {"Gulliver's Travels"})));
 
         OutputColumns outputColumns = xPathTransformer.getOutputColumns();
 
@@ -81,7 +83,7 @@ public class XPathTransformerTest {
         xPathTransformer.xPathExpressions = new String[] { "<abracadabra>" };
         xPathTransformer.init();
 
-        assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {})));
     }
 
     @Test
@@ -92,7 +94,7 @@ public class XPathTransformerTest {
         xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
-        assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {})));
     }
 
     @Test
@@ -103,7 +105,7 @@ public class XPathTransformerTest {
         xPathTransformer.xPathExpressions = new String[] { XPATH_QUERY_FIRST_BOOK };
         xPathTransformer.init();
 
-        assertEquals("", xPathTransformer.transform(inputRow)[0].toString());
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {})));
     }
 
     @Test
@@ -111,13 +113,13 @@ public class XPathTransformerTest {
         MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
                 (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
 
-        final String xPathQueryAllBooks = "/books/book";
+        final String xPathQueryAllBooks = "/books/book/text()";
         
         xPathTransformer.xPathExpressions = new String[] { xPathQueryAllBooks };
         xPathTransformer.init();
 
-        assertEquals("<book>Robinson Crusoe</book><book>Gulliver's Travels</book>", 
-                xPathTransformer.transform(inputRow)[0]);
+        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] { "Robinson Crusoe",
+                "Gulliver's Travels" })));
 
         OutputColumns outputColumns = xPathTransformer.getOutputColumns();
 
