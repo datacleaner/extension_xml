@@ -11,9 +11,14 @@ import org.datacleaner.data.MockInputColumn;
 import org.datacleaner.data.MockInputRow;
 import org.easymock.EasyMock;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class XPathTransformerTest {
+    @Rule
+    public final ExpectedException expectedException = ExpectedException.none();
+    
     private static final String EXAMPLE_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
             + "<books>"
                 + "<book>Robinson Crusoe</book>"
@@ -77,13 +82,11 @@ public class XPathTransformerTest {
 
     @Test
     public void testIllegalXPathQuery() {
-        MockInputRow inputRow = new MockInputRow(new MockInputColumn<?>[] {
-                (MockInputColumn<?>) xPathTransformer.column }, new String[] { EXAMPLE_XML });
-
         xPathTransformer.xPathExpressions = new String[] { "<abracadabra>" };
+        
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("Error occurred compiling XPath expression: \"<abracadabra>\"");
         xPathTransformer.init();
-
-        assertThat(xPathTransformer.transform(inputRow)[0], is(Arrays.asList(new String[] {})));
     }
 
     @Test

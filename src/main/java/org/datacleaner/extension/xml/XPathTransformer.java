@@ -57,7 +57,7 @@ public class XPathTransformer implements Transformer {
     private TransformerFactory transformerFactory;
 
     @Initialize
-    public void init() {
+    public void init() throws IllegalArgumentException {
         final XPath xPath = XPathFactory.newInstance().newXPath();
 
         compiledExpressions = new XPathExpression[xPathExpressions.length];
@@ -66,8 +66,8 @@ public class XPathTransformer implements Transformer {
             try {
                 compiledExpressions[i] = xPath.compile(xPathExpressions[i]);
             } catch (XPathExpressionException e) {
-                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
-                        + xPathExpressions[i] + "\"."));
+                throw new IllegalArgumentException("Error occurred compiling XPath expression: \""
+                        + xPathExpressions[i] + "\".");
             }
         }
 
@@ -126,8 +126,8 @@ public class XPathTransformer implements Transformer {
                     transformedNodes.add(writeDocumentToString(results.item(i)));
                 }
             } catch (XPathExpressionException e) {
-            componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
-                    + xPathExpression + "\"."));
+                componentContext.publishMessage(new ExecutionLogMessage("Error occurred compiling XPath expression: \""
+                        + xPathExpression + "\"."));
             } catch (TransformerException e) {
                 componentContext.publishMessage(new ExecutionLogMessage("Error occurred applying XPath expression: \""
                         + xPathExpression + "\" to xml."));
