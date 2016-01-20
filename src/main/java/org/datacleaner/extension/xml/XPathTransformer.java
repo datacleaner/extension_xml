@@ -21,6 +21,7 @@ import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import org.datacleaner.api.Alias;
 import org.datacleaner.api.Categorized;
 import org.datacleaner.api.ComponentContext;
 import org.datacleaner.api.Configured;
@@ -32,6 +33,7 @@ import org.datacleaner.api.InputRow;
 import org.datacleaner.api.OutputColumns;
 import org.datacleaner.api.Provided;
 import org.datacleaner.api.Transformer;
+import org.datacleaner.api.Validate;
 import org.datacleaner.components.categories.DataStructuresCategory;
 import org.datacleaner.components.categories.TransformSuperCategory;
 import org.w3c.dom.Document;
@@ -39,6 +41,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 @Named("Select values from XML")
+@Alias("XPath transformer")
 @Description("Select values from XML using a number of XPath expressions")
 @Categorized(superCategory = TransformSuperCategory.class, value = DataStructuresCategory.class)
 public class XPathTransformer implements Transformer {
@@ -58,20 +61,30 @@ public class XPathTransformer implements Transformer {
 
     @Initialize
     public void init() throws IllegalArgumentException {
+        compiledExpressions = compileExpressions();
+        transformerFactory = TransformerFactory.newInstance();
+    }
+    
+    @Validate
+    public void validate() {
+        compileExpressions();
+    }
+
+    private XPathExpression[] compileExpressions() {
         final XPath xPath = XPathFactory.newInstance().newXPath();
 
-        compiledExpressions = new XPathExpression[xPathExpressions.length];
+        XPathExpression[] compiledExpressions = new XPathExpression[xPathExpressions.length];
 
         for (int i = 0; i < xPathExpressions.length; i++) {
             try {
                 compiledExpressions[i] = xPath.compile(xPathExpressions[i]);
             } catch (XPathExpressionException e) {
-                throw new IllegalArgumentException("Error occurred compiling XPath expression: \""
-                        + xPathExpressions[i] + "\".");
+                throw new IllegalArgumentException("Error occurred compiling XPath expression: \"" + xPathExpressions[i]
+                        + "\".");
             }
         }
 
-        transformerFactory = TransformerFactory.newInstance();
+        return compiledExpressions;
     }
 
     @Override
@@ -117,7 +130,7 @@ public class XPathTransformer implements Transformer {
 
     private List<String> evaluateXPathExpression(XPathExpression xPathExpression, Document xmlDocument) {
         List<String> transformedNodes = new ArrayList<String>();
-        
+
         if (xPathExpression != null) {
             try {
                 NodeList results = (NodeList) xPathExpression.evaluate(xmlDocument, XPathConstants.NODESET);
